@@ -1,27 +1,7 @@
-# import pytest
-# from playwright.sync_api import sync_playwright
-
-# @pytest.fixture(scope="session")
-# def browser():
-#     with sync_playwright() as p:
-#         browser = p.chromium.launch(headless=True)
-#         yield browser
-#         browser.close()
-
-# @pytest.fixture
-# def page(browser):
-#     context = browser.new_context()
-#     page = context.new_page()
-#     yield page
-#     context.close()
 import os
 import pytest
 from datetime import datetime
 from playwright.sync_api import sync_playwright
-from collections import defaultdict
-import csv
-
-FEATURE_RESULTS = defaultdict(lambda: {"passed": 0, "failed": 0})
 
 # pytest 커맨드 옵션 정의
 def pytest_addoption(parser):
@@ -138,63 +118,3 @@ def page(request):
                 pass
         context.close()
         browser.close()
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    """
-    각 테스트 단계(setup/call/teardown)의 결과를
-    item.rep_setup / item.rep_call / item.rep_teardown 에 저장
-    """
-    outcome = yield  # 다른 플러그인들 먼저 실행
-    rep = outcome.get_result()
-    setattr(item, f"rep_{rep.when}", rep)
-    # 실제 테스트 본문(call)일 때만 집계
-    if rep.when == "call":
-        # feature 마커 찾기
-        feature_marker = item.get_closest_marker("feature")
-        if feature_marker:
-            feature_name = feature_marker.args[0]  # 예: "01. API 카테고리"
-        else:
-            feature_name = "UNSPECIFIED"
-        if rep.failed:
-            FEATURE_RESULTS[feature_name]["failed"] += 1
-        elif rep.passed:
-            FEATURE_RESULTS[feature_name]["passed"] += 1
-        # (skipped 등은 필요하면 추가 가능)
-
-def pytest_sessionfinish(session, exitstatus):
-    """
-    전체 테스트 세션 종료 시점에 CSV 요약 리포트 생성
-    """
-    if not FEATURE_RESULTS:
-        # 실행된 테스트가 없으면 생략
-        return
-    os.makedirs("reports", exist_ok=True)
-    # 타임스탬프
-    now = datetime.now()
-    timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-    filename_ts = now.strftime("%Y%m%d_%H%M%S")
-    csv_path = os.path.join("reports", f"test_summary_{filename_ts}.csv")
-    # 전체 합계 계산
-    total_passed = sum(v["passed"] for v in FEATURE_RESULTS.values())
-    total_failed = sum(v["failed"] for v in FEATURE_RESULTS.values())
-    # CSV 쓰기
-    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        # 1행: 요약
-        # 예: 2025-11-14 09:34:03 / Test Summary Passed : 104, Failed : 0
-        summary_line = f"{timestamp_str} / Test Summary Passed : {total_passed}, Failed : {total_failed}"
-        writer.writerow([summary_line])
-        # 빈 줄 하나
-        writer.writerow([])
-        # 2행 이후: 섹션별 결과
-        # 컬럼: Feature, Passed, Failed
-        writer.writerow(["Feature", "Passed", "Failed"])
-        for feature_name, result in sorted(FEATURE_RESULTS.items()):
-            writer.writerow([
-                feature_name,
-                result["passed"],
-                result["failed"],
-            ])
-    print(f"\n[REPORT] CSV summary saved to: {csv_path}\n")

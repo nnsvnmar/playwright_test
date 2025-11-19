@@ -7,6 +7,7 @@ from locator.locator_desktop import DT_NAVER_HOME, DT_NAVER_SEARCH_RESULT
 logger = logging.getLogger(__name__)
 
 @pytest.mark.desktop
+@pytest.mark.feature("naver-google search")
 @pytest.mark.parametrize("channel", ["chrome", "msedge"])
 def test_desktop_naver_search_google(channel):
     logger.info(f"===== [{channel}] 네이버 검색 → 구글 이동 테스트 시작 =====")
