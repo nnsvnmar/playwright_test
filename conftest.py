@@ -1,195 +1,58 @@
-# import pytest
-# from playwright.sync_api import sync_playwright
-
-# @pytest.fixture(scope="session")
-# def browser():
-#     with sync_playwright() as p:
-#         browser = p.chromium.launch(headless=True)
-#         yield browser
-#         browser.close()
-
-# @pytest.fixture
-# def page(browser):
-#     context = browser.new_context()
-#     page = context.new_page()
-#     yield page
-#     context.close()
-import os
 import pytest
-from datetime import datetime
 from playwright.sync_api import sync_playwright
-from collections import defaultdict
+import os
 import csv
+from collections import defaultdict
+from datetime import datetime
 
-FEATURE_RESULTS = defaultdict(lambda: {"passed": 0, "failed": 0})
-
-# pytest 커맨드 옵션 정의
-def pytest_addoption(parser):
-    parser.addoption(
-        "--browser",
-        action="store",
-        default="chrome",
-        help="Browser: chrome / msedge / chromium (desktop 전용)",
-    )
-    parser.addoption(
-        "--device",
-        action="store",
-        default="none",
-        help="Mobile device: none / iphone13 / pixel5",
-    )
-
-# 테스트 결과 리포트 훅 (성공/실패 여부 저장)
-def pytest_runtest_makereport(item, call):
-    """
-    각 테스트 단계(setup/call/teardown)의 결과를 item.rep_setup, item.rep_call, item.rep_teardown 에 저장
-    """
-    outcome = yield
-    rep = outcome.get_result()
-    setattr(item, f"rep_{rep.when}", rep)
-
-# 공통 Playwright Page fixture
-@pytest.fixture()
-def page(request):
-    """
-    - --browser / --device 옵션에 따라
-      데스크탑(Chrome/Edge/Chromium) 또는
-      모바일(iPhone 13 Pro / Pixel 5) 환경을 생성
-    - 실패 시 스크린샷 + trace 저장
-    """
-    browser_opt = request.config.getoption("--browser")
-    device_opt = request.config.getoption("--device")
-    # 출력 폴더 준비
-    os.makedirs("artifacts/screenshots", exist_ok=True)
-    os.makedirs("artifacts/traces", exist_ok=True)
+@pytest.fixture(scope="session")
+def browser():
     with sync_playwright() as p:
-        browser = None
-        context = None
-        # 모바일 모드 (device_opt != none)
-        if device_opt != "none":
-            if device_opt == "iphone13":
-                device_name = "iPhone 13 Pro"
-            elif device_opt == "pixel5":
-                device_name = "Pixel 5"
-            else:
-                raise ValueError(f"Unknown device option: {device_opt}")
-            profile = p.devices[device_name]
-            browser_type = profile.get("default_browser_type", "chromium")
-            browser = getattr(p, browser_type).launch(headless=False)
-            context = browser.new_context(**profile)
-            print(f"[PLAYWRIGHT] Launching MOBILE: {device_name} ({browser_type})")
-        # 데스크탑 모드 (device_opt == none)
-        else:
-            if browser_opt == "chrome":
-                browser = p.chromium.launch(channel="chrome", headless=False)
-                context = browser.new_context(viewport={"width": 1280, "height": 720})
-                print("[PLAYWRIGHT] Launching DESKTOP Chrome")
-            elif browser_opt == "msedge":
-                browser = p.chromium.launch(channel="msedge", headless=False)
-                context = browser.new_context(viewport={"width": 1280, "height": 720})
-                print("[PLAYWRIGHT] Launching DESKTOP Edge")
-            else:
-                browser = p.chromium.launch(headless=False)
-                context = browser.new_context(viewport={"width": 1280, "height": 720})
-                print("[PLAYWRIGHT] Launching DESKTOP Chromium(default)")
-        page = context.new_page()
-        # Trace 기록 시작 (전체 테스트 구간)
-        context.tracing.start(
-            screenshots=True,
-            snapshots=True,
-            sources=True,
-        )
-        # 훅에서 접근할 수 있게 item에 붙여두기
-        request.node._pw_page = page
-        request.node._pw_context = context
-        request.node._pw_browser = browser
-        # 테스트 실행
-        yield page
-        # teardown: 실패 시 스샷/trace 저장
-        test_name = request.node.name.replace("/", "_").replace("::", "_")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        failed = getattr(request.node, "rep_call", None) and request.node.rep_call.failed
-        if failed:
-            screenshot_path = os.path.join(
-                "artifacts",
-                "screenshots",
-                f"{test_name}_{timestamp}.png",
-            )
-            try:
-                page.screenshot(path=screenshot_path, full_page=True)
-                print(f"[PLAYWRIGHT] Screenshot saved: {screenshot_path}")
-            except Exception as e:
-                print(f"[PLAYWRIGHT] Screenshot failed: {e}")
-            # trace 저장
-            trace_path = os.path.join(
-                "artifacts",
-                "traces",
-                f"{test_name}_{timestamp}.zip",
-            )
-            try:
-                context.tracing.stop(path=trace_path)
-                print(f"[PLAYWRIGHT] Trace saved: {trace_path}")
-            except Exception as e:
-                print(f"[PLAYWRIGHT] Trace stop failed: {e}")
-        else:
-            # 실패가 아니면 trace만 종료(파일 저장 X)
-            try:
-                context.tracing.stop()
-            except Exception:
-                pass
-        context.close()
+        browser = p.chromium.launch(headless=True)
+        yield browser
         browser.close()
 
+@pytest.fixture
+def page(browser):
+    context = browser.new_context()
+    page = context.new_page()
+    yield page
+    context.close()
+
+# 구역별 결과 집계용 전역 딕셔너리
+FEATURE_RESULTS = defaultdict(lambda: {"passed": 0, "failed": 0})
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """
-    각 테스트 단계(setup/call/teardown)의 결과를
-    item.rep_setup / item.rep_call / item.rep_teardown 에 저장
-    """
-    outcome = yield  # 다른 플러그인들 먼저 실행
+    outcome = yield
     rep = outcome.get_result()
     setattr(item, f"rep_{rep.when}", rep)
-    # 실제 테스트 본문(call)일 때만 집계
     if rep.when == "call":
-        # feature 마커 찾기
         feature_marker = item.get_closest_marker("feature")
-        if feature_marker:
-            feature_name = feature_marker.args[0]  # 예: "01. API 카테고리"
-        else:
-            feature_name = "UNSPECIFIED"
+        feature_name = feature_marker.args[0] if feature_marker else "UNSPECIFIED"
         if rep.failed:
             FEATURE_RESULTS[feature_name]["failed"] += 1
         elif rep.passed:
             FEATURE_RESULTS[feature_name]["passed"] += 1
-        # (skipped 등은 필요하면 추가 가능)
 
+# pytest 세션 종료 시 CSV 요약 파일 생성
+#    - reports/test_summary_YYYYMMDD_HHMMSS.csv 형태로 저장
 def pytest_sessionfinish(session, exitstatus):
-    """
-    전체 테스트 세션 종료 시점에 CSV 요약 리포트 생성
-    """
     if not FEATURE_RESULTS:
-        # 실행된 테스트가 없으면 생략
         return
     os.makedirs("reports", exist_ok=True)
-    # 타임스탬프
     now = datetime.now()
-    timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
-    filename_ts = now.strftime("%Y%m%d_%H%M%S")
-    csv_path = os.path.join("reports", f"test_summary_{filename_ts}.csv")
-    # 전체 합계 계산
+    ts_display = now.strftime("%Y-%m-%d %H:%M:%S")
+    ts_file = now.strftime("%Y%m%d_%H%M%S")
     total_passed = sum(v["passed"] for v in FEATURE_RESULTS.values())
     total_failed = sum(v["failed"] for v in FEATURE_RESULTS.values())
-    # CSV 쓰기
+    csv_path = os.path.join("reports", f"test_summary_{ts_file}.csv")
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        # 1행: 요약
-        # 예: 2025-11-14 09:34:03 / Test Summary Passed : 104, Failed : 0
-        summary_line = f"{timestamp_str} / Test Summary Passed : {total_passed}, Failed : {total_failed}"
-        writer.writerow([summary_line])
-        # 빈 줄 하나
+        writer.writerow(
+            [f"{ts_display} / Test Summary Passed : {total_passed}, Failed : {total_failed}"]
+        )
         writer.writerow([])
-        # 2행 이후: 섹션별 결과
-        # 컬럼: Feature, Passed, Failed
         writer.writerow(["Feature", "Passed", "Failed"])
         for feature_name, result in sorted(FEATURE_RESULTS.items()):
             writer.writerow([
@@ -197,4 +60,4 @@ def pytest_sessionfinish(session, exitstatus):
                 result["passed"],
                 result["failed"],
             ])
-    print(f"\n[REPORT] CSV summary saved to: {csv_path}\n")
+    print(f"\n[REPORT] CSV summary saved: {csv_path}\n")
