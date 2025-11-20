@@ -19,44 +19,66 @@ def page(browser):
     yield page
     context.close()
 
-# 구역별 결과 집계용 전역 딕셔너리
+GLOBAL_RESULTS = {"passed": 0, "failed": 0}
 FEATURE_RESULTS = defaultdict(lambda: {"passed": 0, "failed": 0})
+TESTCASE_RESULTS = defaultdict(lambda: {"passed": 0, "failed": 0})
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
     setattr(item, f"rep_{rep.when}", rep)
-    if rep.when == "call":
-        feature_marker = item.get_closest_marker("feature")
-        feature_name = feature_marker.args[0] if feature_marker else "UNSPECIFIED"
-        if rep.failed:
-            FEATURE_RESULTS[feature_name]["failed"] += 1
-        elif rep.passed:
-            FEATURE_RESULTS[feature_name]["passed"] += 1
 
-# pytest 세션 종료 시 CSV 요약 파일 생성
-#    - reports/test_summary_YYYYMMDD_HHMMSS.csv 형태로 저장
+    if rep.when == "call":
+        if rep.failed:
+            GLOBAL_RESULTS["failed"] += 1
+        elif rep.passed:
+            GLOBAL_RESULTS["passed"] += 1
+        feature_marker = item.get_closest_marker("feature")
+        if feature_marker:
+            feature_name = feature_marker.args[0]
+            if rep.failed:
+                FEATURE_RESULTS[feature_name]["failed"] += 1
+            elif rep.passed:
+                FEATURE_RESULTS[feature_name]["passed"] += 1
+        testcase_name = item.name
+        if rep.failed:
+            TESTCASE_RESULTS[testcase_name]["failed"] += 1
+        elif rep.passed:
+            TESTCASE_RESULTS[testcase_name]["passed"] += 1
+
 def pytest_sessionfinish(session, exitstatus):
-    if not FEATURE_RESULTS:
+    total_count = GLOBAL_RESULTS["passed"] + GLOBAL_RESULTS["failed"]
+    if total_count == 0:
         return
     os.makedirs("reports", exist_ok=True)
     now = datetime.now()
     ts_display = now.strftime("%Y-%m-%d %H:%M:%S")
     ts_file = now.strftime("%Y%m%d_%H%M%S")
-    total_passed = sum(v["passed"] for v in FEATURE_RESULTS.values())
-    total_failed = sum(v["failed"] for v in FEATURE_RESULTS.values())
     csv_path = os.path.join("reports", f"test_summary_{ts_file}.csv")
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(
-            [f"{ts_display} / Test Summary Passed : {total_passed}, Failed : {total_failed}"]
+            [f"{ts_display} / Test Summary Passed : {GLOBAL_RESULTS['passed']}, Failed : {GLOBAL_RESULTS['failed']}"]
         )
         writer.writerow([])
         writer.writerow(["Feature", "Passed", "Failed"])
+        writer.writerow([
+            "ALL",
+            GLOBAL_RESULTS["passed"],
+            GLOBAL_RESULTS["failed"],
+        ])
         for feature_name, result in sorted(FEATURE_RESULTS.items()):
             writer.writerow([
                 feature_name,
+                result["passed"],
+                result["failed"],
+            ])
+        writer.writerow([])
+        writer.writerow(["Testcase(Function)", "Passed", "Failed"])
+        for testcase_name, result in sorted(TESTCASE_RESULTS.items()):
+            writer.writerow([
+                testcase_name,
                 result["passed"],
                 result["failed"],
             ])
