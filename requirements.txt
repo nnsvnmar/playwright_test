@@ -23,13 +23,6 @@ httpx==0.24.0
 # 환경 변수, 설정 관리
 python-dotenv==1.1.0
 
-# AI, NLP 도구 (필요 시)
-nltk==3.8.1
-scikit-learn==1.3.0
-bert_score==0.3.13
-openai==0.27.8
-beautifulsoup4==4.12.2
-
 # 의존성 및 유틸리티
 attrs==25.3.0
 certifi==2025.4.26
@@ -50,3 +43,4 @@ typing-extensions==4.13.2
 urllib3==2.4.0
 websocket-client==1.8.0
 wsproto==1.2.0
+loguru>=0.7.2
