@@ -74,7 +74,6 @@ class CommonPage:
     ) -> Locator:
         if isinstance(target, str):
             locator = self.page.locator(target)
-            locator = target
         locator.wait_for(state="attached", timeout=timeout)
         block_map = {
             "top": "start",
@@ -116,7 +115,7 @@ class CommonPage:
             locator = self.page.get_by_text(text, exact=True)
         else:
             locator = self.page.get_by_text(text)
-        locator = locator
+        locator = self.page.get_by_text(text, exact=exact)
         locator = self.align_element_in_viewport(locator, position=position, timeout=timeout)
         locator.wait_for(state="visible", timeout=timeout)
         return locator

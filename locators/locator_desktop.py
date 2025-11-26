@@ -9,6 +9,10 @@ DT_NAVER_SEARCH_RESULT = {
     "google_link": "a:has-text('Google')",
 }
 
+DT_HOME_NOTIFY_ICON = {
+    "notify_icon": "//*[@id='topNotiArea']/button",
+}
+
 LOCATORS_DESKTOP = {}
 for name, value in list(globals().items()):
     if name.startswith("DT_") and isinstance(value, dict):

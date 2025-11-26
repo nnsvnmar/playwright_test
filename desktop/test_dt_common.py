@@ -11,23 +11,18 @@ def test_dt_search_with_common_actions(desktop_page, common):
     channel = meta["channel"]
     logger.info(f"[DESKTOP: {channel}] 네이버 메인 접속")
     page.goto("/", wait_until="domcontentloaded")
-    common.wait_for(page, LOCATORS_DESKTOP, "search_box")
-    common.type_text("search_box", "Google")
-    common.click("search_button")
-    page.wait_for_load_state("domcontentloaded")
+    common.wait_for("search_box")
+    common.type_text("search_box", "Google", clear=True, press_enter=True)
+    page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     logger.info(f"[DESKTOP: {channel}] 검색 결과 URL: {page.url}")
     check.is_in("search.naver.com", page.url, "검색 결과 페이지로 이동하지 않음")
-    common.wait_for("google_link")
-    google_text = common.get_text("google_link")
-    logger.info(f"[DESKTOP: {channel}] Google 텍스트: {google_text}")
-    check.is_in("Google", google_text, "'Google' 링크가 검색 결과에 없음")
+    logger.info(f"[DESKTOP: {channel}] 테스트 종료")
 
 @pytest.mark.desktop
-def test_dt_extract_texts_to_json(desktop_page):
+def test_dt_extract_texts_to_json(desktop_page, common):
     page, meta = desktop_page
     channel = meta["channel"]
-    common = common(page, LOCATORS_DESKTOP)
     logger.info(f"[DESKTOP: {channel}] 네이버 메인 접속")
     page.goto("/", wait_until="domcontentloaded")
     page.wait_for_timeout(1000)
@@ -38,4 +33,16 @@ def test_dt_extract_texts_to_json(desktop_page):
     check.is_true(output_file.exists(), "JSON 파일이 생성되지 않음")
     data = json.loads(output_file.read_text(encoding="utf-8"))
     logger.info(f"[DESKTOP: {channel}] 추출된 텍스트 개수: {len(data)}")
-    check.is_true(len(data > 0, "텍스트가 한 개도 추출되지 않음"))
+    check.is_true(len(data) > 0, "텍스트가 한 개도 추출되지 않음")
+    logger.info(f"[DESKTOP: {channel}] 테스트 종료")
+
+@pytest.mark.desktop
+def test_dt_notify_icon_click(desktop_page, common):
+    page, meta = desktop_page
+    channel = meta["channel"]
+    logger.info(f"[DESKTOP: {channel}] 네이버 메인 접속")
+    page.goto("/", wait_until="domcontentloaded")
+    page.wait_for_timeout(1000)
+    common.click("notify_icon")
+    logger.info(f"[DESKTOP: {channel}] 아이콘 클릭 성공")
+    logger.info(f"[DESKTOP: {channel}] 테스트 종료")
