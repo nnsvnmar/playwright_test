@@ -11,14 +11,15 @@ class CommonPage:
         self.page = page
         self.locators: dict[str, str] = dict(locators or {})
 
-    # ---------- 내부 유틸 ----------
+    # 내부 유틸
     def _get(self, key: str) -> str:
         locator = self.locators.get(key)
         if not locator:
             raise ValueError(f"[ERROR] Locator '{key}' not found in locators")
         return locator
 
-    # ---------- 공통 함수 ----------
+    # 공통 함수
+    # 일반 클릭
     def click(self, key: str):
         locator = self._get(key)
         self.page.locator(locator).click()
@@ -32,6 +33,7 @@ class CommonPage:
             items.nth(i).click()
             self.page.wait_for_timeout(delay_ms)
 
+    # 텍스트 입력
     def type_text(self, key: str, text: str, clear: bool = True, press_enter: bool = False):
         locator = self._get(key)
         field = self.page.locator(locator)
@@ -42,23 +44,28 @@ class CommonPage:
         if press_enter:
             field.press("Enter")
 
+    # 텍스트 반환
     def get_text(self, key: str) -> str:
         locator = self._get(key)
         return self.page.locator(locator).inner_text().strip()
 
+    # 대기
     def wait_for(self, key: str, timeout: int = 5000, state: str = "visible"):
         locator = self._get(key)
         self.page.locator(locator).wait_for(timeout=timeout, state=state)
 
+    # 요소 확인
     def is_visible(self, key: str) -> bool:
         locator = self._get(key)
         return self.page.locator(locator).is_visible()
 
-    # ---------- 스크롤 관련 ----------
+    # 스크롤 관련
+    # 하단 스크롤
     def scroll_to_bottom(self, wait_ms: int = 1000) -> None:
         self.page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
         self.page.wait_for_timeout(wait_ms)
 
+    # 위치 스크롤
     def scroll_by(self, delta_y: int, wait_ms: int = 300) -> None:
         self.page.evaluate(
             """(dy) => { window.scrollBy(0, dy); }""",
@@ -66,6 +73,7 @@ class CommonPage:
         )
         self.page.wait_for_timeout(wait_ms)
 
+    # 요소가 원하는 위치(상/중/하)에 오게끔 스크롤
     def align_element_in_viewport(
         self,
         target: Union[Locator, str],
@@ -74,6 +82,8 @@ class CommonPage:
     ) -> Locator:
         if isinstance(target, str):
             locator = self.page.locator(target)
+        else:
+            locator = target
         locator.wait_for(state="attached", timeout=timeout)
         block_map = {
             "top": "start",
@@ -93,6 +103,7 @@ class CommonPage:
         )
         return locator
 
+    # 요소 센터 스크롤
     def align_in_viewport_by_key(
         self,
         key: str,
@@ -103,7 +114,7 @@ class CommonPage:
         locator = self.page.locator(locator_str)
         return self.align_element_in_viewport(locator, position=position, timeout=timeout)
 
-    # ---------- 텍스트 기반 스크롤 ----------
+    # 텍스트 기반 스크롤
     def bring_text_into_view(
         self,
         text: str,
@@ -111,15 +122,12 @@ class CommonPage:
         exact: bool = True,
         timeout: int = 5000,
     ) -> Locator:
-        if exact:
-            locator = self.page.get_by_text(text, exact=True)
-        else:
-            locator = self.page.get_by_text(text)
         locator = self.page.get_by_text(text, exact=exact)
         locator = self.align_element_in_viewport(locator, position=position, timeout=timeout)
         locator.wait_for(state="visible", timeout=timeout)
         return locator
 
+    # 텍스트를 찾을 때까지 스크롤
     def scroll_until_text(
         self,
         text: str,
@@ -138,8 +146,8 @@ class CommonPage:
             self.page.wait_for_timeout(wait_ms)
         raise Exception(f"Text '{text}' not found after scrolling {max_scroll} times.")
 
-    # ---------- 팝업 / 토스트 처리 ----------
-
+    # 팝업 / 토스트 처리
+    # 팝업 보이는지 확인
     def close_popup_if_visible(self, selector: str, timeout: int = 2000) -> bool:
         popup = self.page.locator(selector)
         try:
@@ -149,6 +157,7 @@ class CommonPage:
         popup.click()
         return True
 
+    # 토스트 알림 대기
     def wait_for_toast(
         self,
         selector: str,
@@ -159,12 +168,11 @@ class CommonPage:
         toast.wait_for(state="visible", timeout=timeout)
         text = toast.inner_text().strip()
         if expected_text is not None:
-            # 여기서 pytest-check를 쓰고 싶으면 테스트 쪽에서 검사하는 걸 추천
             if expected_text not in text:
                 raise AssertionError(f"토스트에 '{expected_text}' 가 없음: {text}")
         return text
 
-    # ---------- 텍스트 JSON 저장 ----------
+    # 텍스트 JSON 저장
     def extract_texts_to_json(
         self,
         selector: str,
@@ -176,7 +184,7 @@ class CommonPage:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(texts, f, ensure_ascii=False, indent=4)
 
-    # ---------- selector 직접 사용하는 입력 (dict 안 쓰는 버전) ----------
+    # selector 직접 사용하는 입력 (dict 안 쓰는 버전)
     def type_text_direct(
         self,
         selector: str,

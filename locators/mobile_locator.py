@@ -9,6 +9,11 @@ M_NAVER_SEARCH_RESULT = {
     "google_link": "a:has-text('Google')",
 }
 
+M_NAVER_NAV_LIST = {
+    "nav_list_container": "//*[@id='NAV_LIST']",
+    "nav_list_items": "//*[@id='NAV_LIST']//li[contains(@class, 'nav_item')]//a",
+}
+
 LOCATORS_MOBILE = {}
 for name, value in list(globals().items()):
     if name.startswith("M_") and isinstance(value, dict):

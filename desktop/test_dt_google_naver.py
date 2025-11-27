@@ -3,7 +3,7 @@ import pytest
 from pytest_check import check
 from playwright.sync_api import sync_playwright
 from loguru import logger
-from locators.locator_desktop import DT_NAVER_HOME, DT_NAVER_SEARCH_RESULT
+from locators.desktop_locator import DT_NAVER_HOME, DT_NAVER_SEARCH_RESULT
 
 @pytest.mark.desktop
 @pytest.mark.feature("web")

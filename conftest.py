@@ -7,8 +7,8 @@ from collections import defaultdict
 from datetime import datetime
 from utils.common import CommonPage
 from utils.mobile_common import MobileCommonPage
-from locators.locator_desktop import LOCATORS_DESKTOP
-from locators.locator_mobile import LOCATORS_MOBILE
+from locators.desktop_locator import LOCATORS_DESKTOP
+from locators.mobile_locator import LOCATORS_MOBILE
 
 
 logger = logging.getLogger(__name__)

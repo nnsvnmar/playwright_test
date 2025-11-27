@@ -4,7 +4,7 @@ import pytest
 from loguru import logger
 from pytest_check import check
 from utils.mobile_common import MobileCommonPage 
-from locators.locator_mobile import LOCATORS_MOBILE
+from locators.mobile_locator import LOCATORS_MOBILE
 
 @pytest.mark.mobile
 @pytest.mark.parametrize("mobile_page", ["iPhone 13 Pro", "Pixel 5"], indirect=True)

@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright
 import pytest
 import pytest_check as check
 import logging
-from locators.locator_mobile import LOCATORS_MOBILE
+from locators.mobile_locator import LOCATORS_MOBILE
 
 logger = logging.getLogger(__name__)
 

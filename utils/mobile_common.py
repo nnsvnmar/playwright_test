@@ -3,10 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 from playwright.sync_api import Page, Locator
 import json
-
-# 공통 상수
-NAV_LIST_CONTAINER_SELECTOR = "#NAV_LIST"
-NAV_LIST_ITEMS_SELECTOR = "#NAV_LIST ul li a"
+from locators.mobile_locator import LOCATORS_MOBILE
 
 class MobileCommonPage:
     def __init__(self, page: Page, locators: dict | None = None, logger=None):
@@ -24,7 +21,7 @@ class MobileCommonPage:
         page = self.page
         if logger:
             logger.info(f"[MOBILE] NAV_LIST 가 보일 때까지 최대 {max_scroll}번 스크롤 시도")
-        container = page.locator(NAV_LIST_CONTAINER_SELECTOR)
+        container = page.locator("nav_list_container")
         page.evaluate("window.scrollTo(0,0)")
         page.wait_for_timeout(200)
         for idx in range(max_scroll):
@@ -50,7 +47,7 @@ class MobileCommonPage:
         return visible
 
     def get_nav_list_items(self) -> Locator:
-        return self.page.locator(NAV_LIST_ITEMS_SELECTOR)
+        return self.page.locator("nav_list_items")
 
     def collect_nav_list_texts(self) -> List[str]:
         items = self.get_nav_list_items()

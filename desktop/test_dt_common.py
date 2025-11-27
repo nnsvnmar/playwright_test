@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from loguru import logger
 from pytest_check import check
-from locators.locator_desktop import LOCATORS_DESKTOP
+from locators.desktop_locator import LOCATORS_DESKTOP
 
 @pytest.mark.desktop
 def test_dt_search_with_common_actions(desktop_page, common):
@@ -46,3 +46,28 @@ def test_dt_notify_icon_click(desktop_page, common):
     common.click("notify_icon")
     logger.info(f"[DESKTOP: {channel}] 아이콘 클릭 성공")
     logger.info(f"[DESKTOP: {channel}] 테스트 종료")
+
+@pytest.mark.desktop
+def test_dt_bring_text_into_view_stock(desktop_page, common):
+    page, meta = desktop_page
+    channel = meta["channel"]
+    logger.info(f"[DESKTOP: {channel}] 네이버 메인 접속")
+    page.goto("/", wait_until="domcontentloaded")
+    target_text = "책방"
+    logger.info(f"[DESKTOP: {channel}] '{target_text}' 텍스트 스크롤 탐색 시작")
+    try:
+        locator = common.bring_text_into_view(
+            text=target_text,
+            position="center",
+            exact=False,
+            timeout=5000
+        )
+    except Exception as e:
+        logger.error(f"[DESKTOP: {channel}] bring_text_into_view 예외 발생: {e}")
+        check.is_true(False, f"예외 발생: {e}")
+        return
+    visible = locator.is_visible()
+    logger.info(f"[DESKTOP: {channel}] '{target_text}' 요소 노출 여부: {visible}")
+    check.is_true(visible, f"'{target_text}' 텍스트가 화면에 보이지 않음")
+    page.wait_for_timeout(800)
+    logger.info(f"[DESKTOP: {channel}] bring_text_into_view 테스트 완료\n")
